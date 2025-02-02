@@ -1,0 +1,43 @@
+:root {
+  --sidebar-width: 16rem;
+  --sidebar-collapsed-width: 70px;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+
+.sidebar-content {
+  opacity: 1;
+  width: auto;
+  transition: opacity 0.3s ease, width 0.3s ease;
+  overflow: hidden;
+}
+
+.collapsed .sidebar-content {
+  opacity: 0;
+  width: 0;
+}
+
+.sidebar-icon {
+  margin-right: 0.75rem;
+  transition: margin-right 0.3s ease;
+}
+
+.collapsed .sidebar-icon {
+  margin-right: 0;
+}
+
+.main-content {
+  margin-left: var(--sidebar-width);
+  transition: margin-left 0.3s ease;
+}
+
+.main-content.collapsed {
+  margin-left: var(--sidebar-collapsed-width);
+}

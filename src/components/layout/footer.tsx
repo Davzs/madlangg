@@ -141,7 +141,7 @@ export function Footer() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="flex flex-col md:flex-row justify-between items-center mt-8 pt-8 border-t gap-4"
+          className="flex flex-col md:flex-row justify-between items-center mt-8 pt-8 gap-4"
         >
           <div className="flex items-center space-x-1 text-sm text-muted-foreground">
             <span>Built with</span>

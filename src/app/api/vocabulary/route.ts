@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await dbConnect();
@@ -47,10 +47,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ words, total });
   } catch (error) {
     console.error("[VOCABULARY_GET]", error);
-    if (error instanceof Error) {
-      return new NextResponse(error.message, { status: 500 });
-    }
-    return new NextResponse("Internal error", { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch vocabulary' }, { status: 500 });
   }
 }
 
@@ -58,7 +55,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await dbConnect();
@@ -68,8 +65,18 @@ export async function POST(request: NextRequest) {
     const requiredFields = ['word', 'pinyin', 'meaning', 'category'];
     for (const field of requiredFields) {
       if (!data[field]) {
-        return new NextResponse(`Missing required field: ${field}`, { status: 400 });
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       }
+    }
+
+    // Check if word already exists for this user
+    const existingWord = await Vocabulary.findOne({
+      userId: session.user.id,
+      word: data.word,
+    });
+
+    if (existingWord) {
+      return NextResponse.json({ error: 'Word already exists in your vocabulary' }, { status: 409 });
     }
 
     const vocabulary = await Vocabulary.create({
@@ -102,10 +109,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(vocabulary);
   } catch (error) {
     console.error("[VOCABULARY_POST]", error);
-    if (error instanceof Error) {
-      return new NextResponse(error.message, { status: 500 });
-    }
-    return new NextResponse("Internal error", { status: 500 });
+    return NextResponse.json({ error: 'Failed to add word to vocabulary' }, { status: 500 });
   }
 }
 
@@ -113,7 +117,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await dbConnect();
@@ -122,15 +126,12 @@ export async function DELETE(request: NextRequest) {
     const result = await Vocabulary.deleteMany({ userId: session.user.id });
 
     if (result.deletedCount === 0) {
-      return new NextResponse("No words found to delete", { status: 404 });
+      return NextResponse.json({ error: 'No words found to delete' }, { status: 404 });
     }
 
-    return new NextResponse(null, { status: 204 });
+    return NextResponse.json(null, { status: 204 });
   } catch (error) {
     console.error("[VOCABULARY_BULK_DELETE]", error);
-    if (error instanceof Error) {
-      return new NextResponse(error.message, { status: 500 });
-    }
-    return new NextResponse("Internal error", { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete vocabulary' }, { status: 500 });
   }
 }

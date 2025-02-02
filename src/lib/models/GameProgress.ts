@@ -1,45 +1,39 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Model } from 'mongoose';
 
-const GameProgressSchema = new mongoose.Schema({
+export interface IGameProgress extends Document {
+  userId: string;
+  gameId: string;
+  score: number;
+  completedAt: Date;
+  stats: {
+    correctAnswers: number;
+    totalAttempts: number;
+    streak: number;
+    accuracy: number;
+  };
+}
+
+const GameProgressSchema = new mongoose.Schema<IGameProgress>({
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String,
     required: true,
+    index: true,
   },
   gameId: {
     type: String,
     required: true,
     enum: ['character-matching', 'pinyin-typing', 'character-writing', 'listening-game', 'sentence-builder'],
   },
-  highScore: {
+  score: {
     type: Number,
+    required: true,
     default: 0,
   },
-  totalXP: {
-    type: Number,
-    default: 0,
-  },
-  gamesPlayed: {
-    type: Number,
-    default: 0,
-  },
-  lastPlayed: {
+  completedAt: {
     type: Date,
+    required: true,
     default: Date.now,
   },
-  achievements: [{
-    type: String,
-    enum: [
-      'first-game',
-      'high-scorer',
-      'practice-master',
-      'perfect-match',
-      'speed-typer',
-      'calligrapher',
-      'listener',
-      'sentence-master'
-    ],
-  }],
   stats: {
     correctAnswers: {
       type: Number,
@@ -49,128 +43,31 @@ const GameProgressSchema = new mongoose.Schema({
       type: Number,
       default: 0,
     },
-    longestStreak: {
+    streak: {
       type: Number,
       default: 0,
     },
-    averageScore: {
+    accuracy: {
       type: Number,
       default: 0,
     },
   },
 }, {
   timestamps: true,
+  toJSON: {
+    virtuals: true,
+    transform: function(doc, ret) {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  }
 });
 
-// Index for faster queries
+// Add indexes for better query performance
 GameProgressSchema.index({ userId: 1, gameId: 1 });
+GameProgressSchema.index({ completedAt: -1 });
 
-// Virtual for accuracy percentage
-GameProgressSchema.virtual('accuracy').get(function() {
-  if (this.stats.totalAttempts === 0) return 0;
-  return (this.stats.correctAnswers / this.stats.totalAttempts) * 100;
-});
-
-// Method to update stats after a game session
-GameProgressSchema.methods.updateStats = function(sessionStats: {
-  score: number;
-  correctAnswers: number;
-  totalAttempts: number;
-  streak: number;
-}) {
-  // Update high score if necessary
-  if (sessionStats.score > this.highScore) {
-    this.highScore = sessionStats.score;
-  }
-
-  // Update total XP (assuming 1 point = 1 XP)
-  this.totalXP += sessionStats.score;
-
-  // Increment games played
-  this.gamesPlayed += 1;
-
-  // Update last played timestamp
-  this.lastPlayed = new Date();
-
-  // Update stats
-  this.stats.correctAnswers += sessionStats.correctAnswers;
-  this.stats.totalAttempts += sessionStats.totalAttempts;
-  if (sessionStats.streak > this.stats.longestStreak) {
-    this.stats.longestStreak = sessionStats.streak;
-  }
-
-  // Update average score
-  this.stats.averageScore = (
-    (this.stats.averageScore * (this.gamesPlayed - 1) + sessionStats.score) /
-    this.gamesPlayed
-  );
-
-  // Check and award achievements
-  this.checkAchievements();
-};
-
-// Method to check and award achievements
-GameProgressSchema.methods.checkAchievements = function() {
-  const achievements = new Set(this.achievements);
-
-  // First game achievement
-  if (this.gamesPlayed === 1) {
-    achievements.add('first-game');
-  }
-
-  // High scorer achievement (score over 1000)
-  if (this.highScore >= 1000) {
-    achievements.add('high-scorer');
-  }
-
-  // Practice master achievement (played over 50 games)
-  if (this.gamesPlayed >= 50) {
-    achievements.add('practice-master');
-  }
-
-  // Game-specific achievements
-  if (this.gameId === 'character-matching' && this.stats.longestStreak >= 10) {
-    achievements.add('perfect-match');
-  }
-  if (this.gameId === 'pinyin-typing' && this.stats.averageScore >= 100) {
-    achievements.add('speed-typer');
-  }
-  if (this.gameId === 'character-writing' && this.gamesPlayed >= 20) {
-    achievements.add('calligrapher');
-  }
-  if (this.gameId === 'listening-game' && this.accuracy >= 90) {
-    achievements.add('listener');
-  }
-  if (this.gameId === 'sentence-builder' && this.stats.longestStreak >= 5) {
-    achievements.add('sentence-master');
-  }
-
-  this.achievements = Array.from(achievements);
-};
-
-export const GameProgress = mongoose.models.GameProgress || 
-  mongoose.model('GameProgress', GameProgressSchema);
-
-export type GameProgressType = mongoose.Document & {
-  userId: mongoose.Types.ObjectId;
-  gameId: string;
-  highScore: number;
-  totalXP: number;
-  gamesPlayed: number;
-  lastPlayed: Date;
-  achievements: string[];
-  stats: {
-    correctAnswers: number;
-    totalAttempts: number;
-    longestStreak: number;
-    averageScore: number;
-  };
-  accuracy: number;
-  updateStats: (sessionStats: {
-    score: number;
-    correctAnswers: number;
-    totalAttempts: number;
-    streak: number;
-  }) => void;
-  checkAchievements: () => void;
-};
+export const GameProgress: Model<IGameProgress> = mongoose.models.GameProgress || 
+  mongoose.model<IGameProgress>('GameProgress', GameProgressSchema);

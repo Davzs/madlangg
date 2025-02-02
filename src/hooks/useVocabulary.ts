@@ -13,6 +13,7 @@ interface VocabularyResponse {
 export function useVocabulary() {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [words, setWords] = useState<IVocabulary[]>([]);
 
   const addWordFromChat = useCallback(async (
@@ -28,6 +29,8 @@ export function useVocabulary() {
     }
 
     setIsLoading(true);
+    setError(null);
+
     try {
       const response = await fetch('/api/vocabulary', {
         method: 'POST',
@@ -45,16 +48,18 @@ export function useVocabulary() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to add word');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add word to vocabulary');
       }
 
       const data = await response.json();
       setWords((prevWords) => [...prevWords, data]);
       toast.success('Word added to vocabulary!');
       return true;
-    } catch (error) {
-      console.error('Error adding word:', error);
-      toast.error('Failed to add word to vocabulary');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add word to vocabulary';
+      setError(errorMessage);
+      toast.error(errorMessage);
       return false;
     } finally {
       setIsLoading(false);
@@ -64,6 +69,7 @@ export function useVocabulary() {
   return {
     addWordFromChat,
     isLoading,
+    error,
   };
 }
 

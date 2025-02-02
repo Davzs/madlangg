@@ -11,7 +11,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectToDatabase();
+    const db = await connectToDatabase();
+    if (!db) {
+      throw new Error('Failed to connect to database');
+    }
 
     const progress = await GameProgress.find({ userId: session.user.id });
     return NextResponse.json(progress);
@@ -32,6 +35,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const db = await connectToDatabase();
+    if (!db) {
+      throw new Error('Failed to connect to database');
+    }
+
     const body = await req.json();
     const { gameId, sessionStats } = body;
 
@@ -41,8 +49,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    await connectToDatabase();
 
     // Find or create progress record
     let progress = await GameProgress.findOne({
